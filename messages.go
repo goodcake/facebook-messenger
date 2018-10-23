@@ -3,6 +3,9 @@ package messenger
 // ButtonType for buttons, it can be ButtonTypeWebURL or ButtonTypePostback
 type ButtonType string
 
+//ContentType for quick replies, it can be text, location, user_phone_number or user_email
+type ContentType string
+
 // AttachmentType describes attachment type in GenericMessage
 type AttachmentType string
 
@@ -17,8 +20,9 @@ type Message interface {
 	foo()
 }
 
-func (m TextMessage) foo()    {} // Message interface
-func (m GenericMessage) foo() {} // Message interface
+func (m TextMessage) foo()       {} // Message interface
+func (m GenericMessage) foo()    {} // Message interface
+func (m QuickReplyMessage) foo() {} // Message interface
 
 const (
 	// ButtonTypeWebURL is type for web links
@@ -41,6 +45,14 @@ const (
 
 	// NotificationTypeNoPush for no push
 	NotificationTypeNoPush = NotificationType("NO_PUSH")
+
+	TextQuickReply = ContentType("text")
+
+	LocationQuickReply = ContentType("location")
+
+	PhoneNumberQuickReply = ContentType("user_phone_number")
+
+	EmailQuickReply = ContentType("user_email")
 )
 
 // TextMessage struct used for sending text messages to messenger
@@ -48,6 +60,12 @@ type TextMessage struct {
 	Message          textMessageContent `json:"message"`
 	Recipient        recipient          `json:"recipient"`
 	NotificationType NotificationType   `json:"notification_type,omitempty"`
+}
+
+type QuickReplyMessage struct {
+	Message          quickReplyContent `json:"message"`
+	Recipient        recipient         `json:"recipient"`
+	NotificationType NotificationType  `json:"notification_type,omitempty"`
 }
 
 // GenericMessage struct used for sending structural messages to messenger (messages with images, links, and buttons)
@@ -63,6 +81,11 @@ type recipient struct {
 
 type textMessageContent struct {
 	Text string `json:"text,omitempty"`
+}
+
+type quickReplyContent struct {
+	Text         string       `json:"text,omitempty"`
+	QuickReplies []QuickReply `json:"quick_replies,omitempty"`
 }
 
 type genericMessageContent struct {
@@ -88,6 +111,13 @@ type Element struct {
 	Buttons  []Button `json:"buttons,omitempty"`
 }
 
+type QuickReply struct {
+	ContentType ContentType `json:"content_type"`
+	Title       string      `json:"title,omitempty"`
+	Payload     string      `json:"payload,omitempty"`
+	ImageURL    string      `json:"image_url,omitempty"`
+}
+
 // Button on Generic Message template element
 type Button struct {
 	Type    ButtonType `json:"type"`
@@ -103,6 +133,13 @@ func (msng Messenger) NewTextMessage(userID int64, text string) TextMessage {
 	return TextMessage{
 		Recipient: recipient{ID: userID},
 		Message:   textMessageContent{Text: text},
+	}
+}
+
+func (msng Messenger) NewQuickReplyMessage(userID int64, text string) QuickReplyMessage {
+	return QuickReplyMessage{
+		Recipient: recipient{ID: userID},
+		Message:   quickReplyContent{Text: text},
 	}
 }
 
@@ -147,6 +184,28 @@ func newElement(title, subtitle, itemURL, imageURL string, buttons []Button) Ele
 		ItemURL:  itemURL,
 		ImageURL: imageURL,
 		Buttons:  buttons,
+	}
+}
+
+//AddNewQuickReply add quick reply to Quick Reply Message template
+func (m *QuickReplyMessage) AddNewQuickReply(contentType ContentType, title, payload, imgURL string) {
+	m.AddQuickReply(newQuickReply(contentType, title, payload, imgURL))
+}
+
+func (m *QuickReplyMessage) AddQuickReply(qr QuickReply) {
+	m.Message.QuickReplies = append(m.Message.QuickReplies, qr)
+}
+
+func (msng Messenger) NewQuickReply(contentType ContentType, title, payload, imgURL string) QuickReply {
+	return newQuickReply(contentType, title, payload, imgURL)
+}
+
+func newQuickReply(contentType ContentType, title, payload, imgURL string) QuickReply {
+	return QuickReply{
+		ContentType: contentType,
+		Title:       title,
+		Payload:     payload,
+		ImageURL:    imgURL,
 	}
 }
 
